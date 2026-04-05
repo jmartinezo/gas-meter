@@ -1,0 +1,61 @@
+name: Gas Meter — Lectura mensual
+
+on:
+  schedule:
+    # Día 15 de cada mes a las 10:00 (hora España peninsular = UTC+1/+2)
+    # En UTC: 09:00 en invierno, ajustar a 08:00 en verano si se prefiere exacto
+    - cron: "0 9 15 * *"
+  workflow_dispatch:
+    # Permite lanzarlo manualmente desde GitHub Actions
+
+jobs:
+  submit-reading:
+    name: Enviar lectura del contador
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+
+      - name: Descargar foto del contador desde Google Drive
+        env:
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "$GDRIVE_SERVICE_ACCOUNT_JSON" > /tmp/sa.json
+          pip install --quiet gdown google-api-python-client google-auth
+          python3 scripts/download_photo.py
+
+      - name: Ejecutar lectura
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NIF: ${{ secrets.NIF }}
+          CUPS: ${{ secrets.CUPS }}
+          NUMERO_CONTADOR: ${{ secrets.NUMERO_CONTADOR }}
+          PHOTOS_DIR: ./photos
+        run: |
+          # En CI la confirmación es automática (no hay stdin interactivo)
+          echo "s" | npm run submit
+
+      - name: Subir screenshots como artefactos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: redexis-screenshots-${{ github.run_id }}
+          path: |
+            /tmp/redexis_preview.png
+            /tmp/redexis_result.png
+          retention-days: 30

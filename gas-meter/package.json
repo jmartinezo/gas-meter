@@ -1,0 +1,16 @@
+{
+  "name": "gas-meter",
+  "version": "1.0.0",
+  "description": "Automatización mensual de lectura del contador de gas (Redexis)",
+  "scripts": {
+    "submit": "npx ts-node submit_reading.ts",
+    "install:browsers": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@playwright/test": "^1.52.0",
+    "dotenv": "^16.4.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}
